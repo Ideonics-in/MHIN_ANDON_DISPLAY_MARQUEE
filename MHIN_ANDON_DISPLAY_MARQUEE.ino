@@ -1,5 +1,7 @@
 
 
+
+
 #include <EEPROM.h>
 #include <Arial14.h>
 #include <Arial_black_16.h>
@@ -99,18 +101,25 @@ unsigned int CurrentLine = 0;
 
 typedef struct LINE
 {
-	unsigned char ID[3];
-	char NAME[40];
+	char NAME[32];
 	STATION_TYPE Type;
-	int Issues[16];
+	int Issues[32];
 	int IssueCount;
 	bool StateChanged;
 
 };
 
+typedef struct LINEINFO
+{
+  char NAME[32];
+  STATION_TYPE Type;
+  
+
+};
+
+
 char TYPE_1_MESSAGES[15][28] =
 {
-	
 	"Machine Problem",
 	"Robot Problem",
 	"R/M conveying Problem",
@@ -134,7 +143,6 @@ char TYPE_1_MESSAGES[15][28] =
 
 char TYPE_2_MESSAGES[15][28] =
 {
-	
 	"Machine Problem",
 	"Fixture B/D",
 	"No Packing Material",
@@ -185,17 +193,6 @@ char TYPE_3_MESSAGES[15][28] =
 
 
 
-/*
-OFCA Line
-Fleating Machine
-Round Filter Dosing - 1
-Round Filter Dosing - 2
-AOS Wrapping Machine
-AOS Gluing machine - 1
-AOS Gluing machine - 2
-AOS Welding Line
-Vibration Welding Line
-*/
 
 unsigned int MARQUEE_LINES[MAX_LINES + 1] = { 0 };
 unsigned int CurrentMarqueeIndex = 1;
@@ -208,21 +205,21 @@ unsigned int NextMarqueeIndex = 1;
 
 LINE Lines[] = {
 	{},
-	{ "1","FORD A/C",TYPE_2 },
-	{ "2","MHD-1045/1024",TYPE_2 },
-	{ "3","TOY-1086",TYPE_2 },
-	{ "4","MHD-1023/1029/1069", TYPE_2 },
-	{ "5","DHE-1004",TYPE_2 },
-	{ "6","MHD-100",TYPE_2 },
-	{ "7","LINE_7",TYPE_2 },
-	{ "8","LINE_8",TYPE_2 },
-	{ "9","LINE_9",TYPE_2 },
-	{ "10","LINE_10",TYPE_2 },
-	{ "11","CHR-DSD ASSY",TYPE_2 },
-	{ "12","TURBO ADAPTOR", TYPE_2 },
-	{ "13","CHR-1124 A/C", TYPE_2 },
-	{ "14","IMM-500T", TYPE_1 },
-	{ "15","IMM-350", TYPE_1 }
+	{ "FORD A/C",TYPE_2 },
+	{ "MHD-1045/1024",TYPE_2 },
+	{ "TOY-1086",TYPE_2 },
+	{ "MHD-1023/1029/1069", TYPE_2 },
+	{ "DHE-1004",TYPE_2 },
+	{ "MHD-100",TYPE_2 },
+	{ "LINE_7",TYPE_2 },
+	{ "LINE_8",TYPE_2 },
+	{ "LINE_9",TYPE_2 },
+	{ "LINE_10",TYPE_2 },
+	{ "CHR-DSD ASSY",TYPE_2 },
+	{ "TURBO ADAPTOR", TYPE_2 },
+	{ "CHR-1124 A/C", TYPE_2 },
+	{ "IMM-500T", TYPE_1 },
+	{ "IMM-350T", TYPE_1 }
 	
 	
 
@@ -232,21 +229,21 @@ LINE Lines[] = {
 
 LINE Lines[] = {
 	{},
-	{ "1","OFCA",TYPE_2 },
-	{ "2","TATA OES",TYPE_2 },
-	{ "3","LINE_3",TYPE_2 },
-	{ "4","LINE_4", TYPE_2 },
-	{ "5","AOS",TYPE_2 },
-	{ "6","LINE_6",TYPE_2 },
-	{ "7","LINE_7",TYPE_2 },
-	{ "8","LINE_8",TYPE_2 },
-	{ "9","VIB WELDING",TYPE_3 },
-	{ "10","LINE_10",TYPE_2 },
-	{ "11","LINE_11",TYPE_2 },
-	{ "12","LINE_12", TYPE_2 },
-	{ "13","LINE_13", TYPE_2 },
-	{ "14","LINE_14", TYPE_1 },
-	{ "15","LINE_15", TYPE_1 }
+	{ "OFCA",TYPE_2 },
+	{ "TATA OES",TYPE_2 },
+	{ "LINE_3",TYPE_2 },
+	{ "LINE_4", TYPE_2 },
+	{ "AOS",TYPE_2 },
+	{ "LINE_6",TYPE_2 },
+	{ "LINE_7",TYPE_2 },
+	{ "LINE_8",TYPE_2 },
+	{ "VIB WELDING",TYPE_3 },
+	{ "LINE10",TYPE_2 },
+	{ "LINE11",TYPE_2 },
+	{ "LINE12", TYPE_2 },
+	{ "LINE13", TYPE_2 },
+	{ "LINE_14", TYPE_1 },
+	{ "LINE_15", TYPE_1 }
 
 
 
@@ -277,7 +274,7 @@ void ScanDMD()
 
 int dataIndex = 0;
 bool dataReceived = false;
-char message[350] = "WELCOME TO MANN AND HUMMEL";
+char message[750] = "WELCOME TO MANN AND HUMMEL";
 
 
 void MakeLineMarquee()
@@ -302,17 +299,22 @@ void MakeLineMarquee()
 				strcat(message, (const char*)TYPE_2_MESSAGES[Lines[CurrentLine].Issues[i]]);
 				strcat(message, ";");
 			}
-			else if (Lines[CurrentLine].Type == TYPE_2)
+			else if (Lines[CurrentLine].Type == TYPE_3)
 			{
-				strcat(message, (const char*)TYPE_2_MESSAGES[Lines[CurrentLine].Issues[i]]);
+				strcat(message, (const char*)TYPE_3_MESSAGES[Lines[CurrentLine].Issues[i]]);
 				strcat(message, ";");
 			}
 		}
 	}
 }
 
+void ReadLineInfo(LINEINFO line, int id);
+void WriteLineInfo(LINEINFO line, int id);
+
+
 void setup()
 {
+  int i;
 #ifdef __FACTORY_CONFIGURATION
 	EEPROM.put(EEPROM_TYPE_1_BASE, TYPE_1_MESSAGES);
 	EEPROM.put(EEPROM_TYPE_2_BASE, TYPE_2_MESSAGES);
@@ -343,13 +345,27 @@ void setup()
 	Serial2.println("Application Started");
 	Serial3.println("Application Started");
 
+ for(i = 0 ; i <= MAX_LINES; i++)
+  WriteLineInfo(Lines[i], i);
+
+ for(i = 0 ; i <= MAX_LINES; i++)
+ {
+  ReadLineInfo(Lines[i] , i);
+  Serial.print("Line:");
+  Serial.println(Lines[i].NAME);
+ }
+
 }
+
+
 
 void loop()
 {
 
 	unsigned char txPacket[10],i,lineID,issues;
 	unsigned int j, k;
+
+  
 #if 0
 	int i, j;
 	for (int i = 0; i < 32 * DISPLAYS_ACROSS; i++)
